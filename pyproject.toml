@@ -4,11 +4,28 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "xstech-gateway"
-version = "0.1.0"
+version = "0.1.1"
 description = "把 xstech.one 的网页端能力包装成 OpenAI 兼容端点，供终端与本地工具使用"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
+keywords = ["openai-compatible", "llm", "cli", "gateway", "terminal", "xstech"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Utilities",
+]
+
+[project.urls]
+Homepage = "https://github.com/ice-wocker/xstech-terminal"
+Repository = "https://github.com/ice-wocker/xstech-terminal"
+Changelog = "https://github.com/ice-wocker/xstech-terminal/blob/main/CHANGELOG.md"
 dependencies = [
     "requests>=2.31",
     "pillow>=10.0",

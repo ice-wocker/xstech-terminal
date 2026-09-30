@@ -36,7 +36,7 @@ xstech.one 是个网页聊天站，能力不错，但只能在浏览器里用：
 需要 Python 3.10+：
 
 ```bash
-git clone <this-repo>
+git clone https://github.com/ice-wocker/xstech-terminal.git
 cd xstech-terminal
 pip install -e .
 ```
@@ -73,6 +73,9 @@ xstech-gateway register
 ```bash
 xstech-gateway --email you@example.com --password 'your-password' login
 ```
+
+> Termux 上 `pip` 编译 numpy/pillow 比较慢，用系统包更快：
+> `pkg install python-numpy python-pillow`
 
 ### 2. 看看有哪些模型
 
@@ -207,6 +210,16 @@ aichat --api-url http://127.0.0.1:8787/v1 --model 'deepseek::deepseek-v4-flash'
 | 本站 `ask` / `serve` | ✅ |
 | 多轮对话 | ✅ 历史消息正确透传 |
 
+运行环境：
+
+| 环境 | 结果 |
+|---|---|
+| Linux / macOS | ✅ 含与不含 OpenCV 两种路径 |
+| **Termux (Android)** | ✅ 默认不带 OpenCV，走纯 numpy 路径（v0.1.1 前是必崩） |
+
+`cv2` 装了和没装**命中率相同**（两条路径的腐蚀结果逐像素一致），
+所以 Termux 上不必为了跑通去折腾 OpenCV 的交叉编译。
+
 思考块：上游把推理过程包在 `<think>...</think>` 里返回。本项目在交付前会剥掉它，
 并且处理了标签被 SSE 分片**从中间切开**的情况（`<thi` + `nk>`），
 不会把标签本身漏给客户端。
@@ -249,6 +262,16 @@ src/
   account.py   凭据保管
   cli.py       命令行入口
 ```
+
+---
+
+## 版本与更新
+
+当前 **v0.1.1**。跑 `xstech-gateway --version` 确认自己装的是哪版。
+
+改动记录见 [CHANGELOG.md](CHANGELOG.md)。最近一次修复值得单独提：
+v0.1.1 之前，没装 OpenCV 的环境（Termux 默认如此）**连 `xstech-gateway --help`
+都跑不起来** —— 根因是 `captcha.py` 在模块顶层写死了 `import cv2`。
 
 ---
 
