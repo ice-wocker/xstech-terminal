@@ -11,15 +11,35 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.10", "3.12"]
+        # 两条腿：装了 OpenCV 的走加速路径，没装的走 numpy 兜底。
+        # 之前只测了前者，结果「Termux 上没装 cv2 直接 traceback」漏到了用户手里。
+        install-cv2: ["yes", "no"]
+    env:
+      # 用变量拼 extra，避免出现 `pip install -e ""` 这种非法参数
+      CV2_EXTRA: ${{ matrix.install-cv2 == 'yes' && '.[captcha-cv2]' || '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: 安装依赖
+      - name: 安装依赖（OpenCV=${{ matrix.install-cv2 }}）
         run: |
           python -m pip install --upgrade pip
+          if [ -n "$CV2_EXTRA" ]; then
+            pip install -e "$CV2_EXTRA"
+          fi
           pip install -e ".[dev]"
+      - name: 断言 OpenCV 的存在状态符合预期
+        run: |
+          if [ "${{ matrix.install-cv2 }}" = "yes" ]; then
+            python -c "import cv2; print('cv2', cv2.__version__)"
+          else
+            python - <<'PY'
+            import importlib.util
+            assert importlib.util.find_spec("cv2") is None, "这条腿不该装 OpenCV"
+            print("cv2 不存在，符合预期")
+            PY
+          fi
       - name: 语法检查
         run: python -m compileall -q src tests
       - name: 单测
@@ -28,3 +48,57 @@ jobs:
         run: |
           xstech-gateway --version
           xstech-gateway --help
+
+  # 单独一条腿：把 cv2 从导入系统里彻底藏掉，再跑一遍注册链路的导入与求解，
+  # 确保「没装 OpenCV」这条路径真的可用（这是真出过的故障）。
+  test-no-cv2-explicit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 只装最小依赖（不含 OpenCV）
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      - name: 屏蔽 cv2 后导入整条注册链路并解一道题
+        run: |
+          python - <<'PY'
+          import base64, builtins, io
+          import numpy as np
+          from PIL import Image, ImageDraw
+
+          real_import = builtins.__import__
+          def fake_import(name, *a, **kw):
+              if name == "cv2" or name.startswith("cv2."):
+                  raise ImportError("No module named 'cv2'")
+              return real_import(name, *a, **kw)
+          builtins.__import__ = fake_import
+
+          from src import captcha, upstream
+          assert captcha.HAS_CV2 is False, "应该探测到没有 cv2"
+          assert hasattr(upstream.Upstream, "solve_challenge")
+          print("无 cv2 环境下，captcha / upstream 均可正常导入")
+
+          # 造一张验证码，确认纯 numpy 路径能解出正确偏移
+          rng = np.random.default_rng(0)
+          h, w = 100, 300
+          yy, xx = np.mgrid[0:h, 0:w]
+          bg = np.clip(rng.integers(40, 200, (h, w, 3)) + (xx // 3)[..., None], 0, 255).astype(np.uint8)
+          sh, sw, ty, tx = 40, 44, 40, 171
+          thumb = np.zeros((sh, sw, 3), np.uint8)
+          shape = Image.new("L", (sw, sh), 0)
+          ImageDraw.Draw(shape).ellipse((6, 4, sw - 8, sh - 6), fill=255)
+          m = np.asarray(shape) > 0
+          thumb[m] = bg[ty:ty + sh, tx:tx + sw][m]
+
+          def url(a):
+              b = io.BytesIO(); Image.fromarray(a).save(b, format="PNG")
+              return "data:image/png;base64," + base64.b64encode(b.getvalue()).decode()
+
+          x, score = captcha.solve_offset_with_confidence(url(bg), url(thumb), ty)
+          assert x == tx, f"期望 x={tx}，实际 x={x}"
+          assert score > 0.9, f"置信度偏低: {score}"
+          print(f"无 cv2 求解正确: x={x} 置信度={score:.4f}")
+          PY
