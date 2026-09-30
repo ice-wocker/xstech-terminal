@@ -34,11 +34,11 @@ jobs:
           if [ "${{ matrix.install-cv2 }}" = "yes" ]; then
             python -c "import cv2; print('cv2', cv2.__version__)"
           else
-            python - <<'PY'
-            import importlib.util
-            assert importlib.util.find_spec("cv2") is None, "这条腿不该装 OpenCV"
-            print("cv2 不存在，符合预期")
-            PY
+            # 注意 heredoc 的结束符必须顶格：body 里带 YAML 块缩进，
+            # bash 就找不到 `PY`，报 `syntax error: unexpected end of file`。
+            # 上一版就是栽在这 —— 单测那步用了正确的写法，这步没有。
+            python -c "import importlib.util, sys; \
+              sys.exit('这条腿不该装 OpenCV') if importlib.util.find_spec('cv2') is not None else print('cv2 不存在，符合预期')"
           fi
       - name: 语法检查
         run: python -m compileall -q src tests
