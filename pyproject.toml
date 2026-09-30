@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,13 +8,12 @@ version = "0.1.1"
 description = "把 xstech.one 的网页端能力包装成 OpenAI 兼容端点，供终端与本地工具使用"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = "MIT"
 keywords = ["openai-compatible", "llm", "cli", "gateway", "terminal", "xstech"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Console",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -22,15 +21,20 @@ classifiers = [
     "Topic :: Utilities",
 ]
 
-[project.urls]
-Homepage = "https://github.com/ice-wocker/xstech-terminal"
-Repository = "https://github.com/ice-wocker/xstech-terminal"
-Changelog = "https://github.com/ice-wocker/xstech-terminal/blob/main/CHANGELOG.md"
 dependencies = [
     "requests>=2.31",
     "pillow>=10.0",
     "numpy>=1.24",
 ]
+
+# 注意：[project.urls] 必须排在 dependencies 之后、且不能插在 [project] 的表项中间。
+# 上一版把它放在了 dependencies 前面，TOML 会把随后那几行解析成
+# `project.urls.dependencies`（嵌套表），pip 直接报：
+#   invalid pyproject.toml config: `project.urls.dependencies` must be string
+[project.urls]
+Homepage = "https://github.com/ice-wocker/xstech-terminal"
+Repository = "https://github.com/ice-wocker/xstech-terminal"
+Changelog = "https://github.com/ice-wocker/xstech-terminal/blob/main/CHANGELOG.md"
 
 [project.scripts]
 xstech-gateway = "src.cli:main"
