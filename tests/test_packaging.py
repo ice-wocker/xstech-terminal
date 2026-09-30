@@ -18,10 +18,18 @@ from __future__ import annotations
 import re
 import subprocess
 import sys
-import tomllib
 from pathlib import Path
 
 import pytest
+
+try:
+    import tomllib  # Python 3.11+ 标准库
+except ModuleNotFoundError:  # pragma: no cover - 3.10 分支
+    # 项目声明 requires-python = ">=3.10"，而 tomllib 是 3.11 才进标准库的。
+    # 之前这里直接 `import tomllib`，3.10 那条 CI 腿在**收集阶段**就炸了
+    # （ModuleNotFoundError，整个文件一条用例都没跑）——
+    # 本地是 3.11 所以完全没看见。tomli 已在 pyproject 的 dev extra 里。
+    import tomli as tomllib
 
 ROOT = Path(__file__).resolve().parent.parent
 PYPROJECT = ROOT / "pyproject.toml"
