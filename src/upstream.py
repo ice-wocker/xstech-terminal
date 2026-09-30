@@ -143,13 +143,17 @@ class Upstream:
         背景是匀色天空时相关峰会变钝，实测单次命中率约 90%，因此对
         低置信度的题直接弃掉重开，不浪费核验机会。
         """
-        from .captcha import solve_offset_with_confidence
+        from .captcha import MissingImagingError, solve_offset_with_confidence
 
         last_error = "滑块验证未通过"
         for _ in range(attempts):
             ch = self._challenge()
             y = ch.get("thumbY", 0)
-            offset, score = solve_offset_with_confidence(ch["image"], ch["thumb"], y)
+            try:
+                offset, score = solve_offset_with_confidence(ch["image"], ch["thumb"], y)
+            except MissingImagingError as exc:
+                # 缺依赖是可修的环境问题，不该伪装成「验证未通过」或漏出裸 traceback
+                raise UpstreamError(str(exc)) from exc
             if score < MIN_MATCH_CONFIDENCE:
                 continue  # 这题背景太素，重开一道
             if self._verify(ch["id"], offset, y):

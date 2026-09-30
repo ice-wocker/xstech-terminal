@@ -43,6 +43,18 @@ pip install -e .
 
 依赖只有三个：`requests`、`pillow`、`numpy`（见 `pyproject.toml`）。
 
+**OpenCV 是可选的，不用装。** 滑块求解里的形态学腐蚀在装了 `cv2` 时会走
+OpenCV 加速，没装则退回等价的纯 numpy 实现（两条路径已比对过逐像素一致）。
+想用加速版：
+
+```bash
+pip install -e ".[captcha-cv2]"
+```
+
+> 说明：旧版本在 `captcha.py` 顶层写死了 `import cv2`，导致没装 OpenCV 的机器
+> （比如 Termux 默认环境）连 `xstech-gateway register` 都起不来，只给一段
+> `ModuleNotFoundError`。这个问题在 v0.1.1 修复，现在缺依赖时会给可操作的提示。
+
 ---
 
 ## 用法
@@ -171,6 +183,11 @@ aichat --api-url http://127.0.0.1:8787/v1 --model 'deepseek::deepseek-v4-flash'
 失败即作废，所以对置信度低于 0.6 的题（通常是匀色天空背景，相关峰很钝）
 直接弃掉换一道，而不是硬交。
 
+上面两个调参点里，「5×5 腐蚀」这步**不依赖 OpenCV**：没有 `cv2` 时用纯 numpy
+做同样的 5×5 全 1 结构元腐蚀，且刻意对齐 OpenCV 的边界语义（结构元在边界处
+只取界内重叠部分，不做零填充）。两条路径在 5000 组随机掩码（尺寸 3×3 ~ 60×60）
+上逐像素一致，所以**装不装 OpenCV 命中率相同**。
+
 ### 无状态
 
 每次请求都会新开一个上游 session，服务端不保存任何对话状态。
@@ -225,7 +242,7 @@ pytest -q
 
 ```
 src/
-  captcha.py   滑块求解（相关性模板匹配）
+  captcha.py   滑块求解（相关性模板匹配，OpenCV 可选）
   upstream.py  私有协议客户端
   gateway.py   翻译成 OpenAI 协议
   server.py    HTTP 服务（标准库，零额外依赖）
