@@ -1,4 +1,4 @@
-"""打包与 CI 配置的自检。
+"""打包与构建配置的自检。
 
 这两类错误有个共同点：**本地跑 pytest 完全看不出来**，
 只有真的走一次「安装」或「bash 解析」才暴露。它们各自都真实发生过一次：
@@ -6,9 +6,12 @@
 1. `[project.urls]` 插在 `dependencies` 前面 → TOML 把它解析成
    `project.urls.dependencies`，`pip install -e .` 直接失败。
    而 `pytest` 用的是源码目录，不碰打包元数据，所以照样绿。
-2. YAML 块标量里的 heredoc 结束符带了缩进 → bash 找不到 `PY`，
-   报 `syntax error: unexpected end of file`。`yaml.safe_load` 能过，
-   肉眼看缩进也像对的。
+2. 构建脚本里的 heredoc 结束符带了缩进 → bash 找不到 `PY`，
+   报 `syntax error: unexpected end of file`。肉眼看缩进也像对的。
+
+第 2 条原来在 GitHub Actions 的 workflow 里，现在这些检查搬进了 `Makefile`
+（连 CI 一起搬走了，理由见 `.github/workflows/README.md`），所以这里改成
+校验 Makefile 的每个 recipe 行 —— 同样的错法，换个地方还是会犯。
 
 所以这里断言的是「能被解析 / 能被执行」，而不是「看起来像对的」。
 """
@@ -33,7 +36,7 @@ except ModuleNotFoundError:  # pragma: no cover - 3.10 分支
 
 ROOT = Path(__file__).resolve().parent.parent
 PYPROJECT = ROOT / "pyproject.toml"
-WORKFLOW = ROOT / ".github" / "workflows" / "ci.yml"
+MAKEFILE = ROOT / "Makefile"
 
 
 def test_pyproject_is_parseable():
@@ -79,35 +82,73 @@ def test_version_is_consistent():
     assert "__version__" in cli_text, "cli.py 应当用 __version__ 输出 --version"
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="bash 语法检查，Windows 不适用")
-def test_workflow_run_blocks_are_valid_shell():
-    """遍历 workflow 里所有 `run` 块，逐个交给 `bash -n`。
+@pytest.mark.skipif(sys.platform == "win32", reason="make 语法检查，Windows 不适用")
+def test_makefile_recipes_are_valid_shell():
+    """把 Makefile 里每个 recipe 行交给 `bash -n`。
 
-    这一次性拦住「YAML 合法但嵌的脚本是坏的」整类问题 ——
-    包括 heredoc 结束符被块缩进带歪这种。
+    拦的是「Makefile 能读、但里面的 shell 是坏的」这一类 —— 包括 heredoc
+    结束符被缩进带歪这种（这坑原来在 workflow 里踩过一次）。
     """
-    yaml = pytest.importorskip("yaml")
+    lines = MAKEFILE.read_text(encoding="utf-8").splitlines()
 
-    workflow = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
     checked = 0
+    lineno = 0
+    while lineno < len(lines):
+        line = lines[lineno]
+        lineno += 1
+        if not line.startswith("\t") or not line.strip():
+            continue  # 只挑 recipe 行（Makefile 用真 tab 缩进）
 
-    for job_name, job in workflow["jobs"].items():
-        for step in job.get("steps", []):
-            run = step.get("run")
-            if not isinstance(run, str):
-                continue  # `uses:` 步骤没有 run
-            # 模拟 GHA 展开表达式，避免 `${{ }}` 干扰 bash 解析
-            expanded = re.sub(r"\$\{\{[^}]*\}\}", "PLACEHOLDER", run)
-            proc = subprocess.run(
-                ["bash", "-n"],
-                input=expanded,
-                capture_output=True,
-                text=True,
-            )
-            checked += 1
-            assert proc.returncode == 0, (
-                f"workflow 里 [{job_name}] / 「{step.get('name')}」的 run 块 bash 解析失败：\n"
-                f"{proc.stderr.strip()}"
-            )
+        # 续行要拼起来整条跑：单看某一行可能只是 `... \` 的一半，
+        # `bash -n` 会把它当语法错误 —— 那是假阳性。
+        start = lineno
+        script = line[1:]
+        while script.rstrip().endswith("\\") and lineno < len(lines):
+            script = script.rstrip()[:-1] + lines[lineno].lstrip()
+            lineno += 1
 
-    assert checked > 0, "没有检查到任何 run 块，说明 workflow 结构变了"
+        script = re.sub(r"\$\$", "$", script)     # 还原 Make 转义
+        # 展开变量：从内到外反复替换，因为 `$(word 1,$(subst :, ,$(X)))` 这种
+        # 是嵌套的。只跑一遍会留下半截括号，`bash -n` 判语法错 —— 那是假阳性。
+        previous = None
+        while previous != script:
+            previous = script
+            script = re.sub(r"\$\([^()]*\)", "PLACEHOLDER", script)
+        proc = subprocess.run(["bash", "-n"], input=script,
+                              capture_output=True, text=True)
+        checked += 1
+        assert proc.returncode == 0, (
+            f"Makefile 第 {start} 行的 recipe bash 解析失败：\n{script}\n{proc.stderr.strip()}"
+        )
+
+    assert checked > 0, "一个 recipe 行都没检查到，说明 Makefile 结构变了"
+
+
+def test_all_target_covers_smoke_test_and_e2e():
+    """`make all` 必须把三件事都带上，否则改 Makefile 时容易漏掉其中一项。"""
+    text = MAKEFILE.read_text(encoding="utf-8")
+    m = re.search(r"^all:(.*)$", text, re.M)
+    assert m, "Makefile 里找不到 all 目标"
+    for target in ("smoke", "test", "e2e"):
+        assert target in m.group(1), f"`make all` 少了 {target}"
+
+
+def test_no_ci_workflow_and_no_dangling_reference():
+    """CI 被有意删掉了。哪天有人又加回来，要么是想清楚了，要么是顺手 ——
+    两种情况都该在这条断言上停一下，去看 `.github/workflows/README.md`。"""
+    workflows = ROOT / ".github" / "workflows"
+    assert not list(workflows.glob("*.y*ml")), (
+        "又出现了 workflow 文件。这个项目有意不做 CI（见 .github/workflows/README.md），"
+        "检查请加进 Makefile 的 all。"
+    )
+    # 顺带确认没有别的地方还指着已删的 ci.yml。
+    # 扫的对象要排除两类：本文件（下面这行断言的原文里就有这个名字），
+    # 以及 .github/workflows/README.md（专门解释为什么删的那篇）。
+    suspects = [p for p in ROOT.glob("*.md")]
+    suspects += [p for p in (ROOT / "src").glob("*.py")]
+    suspects += [p for p in (ROOT / "tests").glob("*.py") if p.name != Path(__file__).name]
+    for path in suspects:
+        assert "ci.yml" not in path.read_text(encoding="utf-8"), (
+            f"{path.name} 还引用着已删除的 workflows/ci.yml；"
+            "检查请加进 Makefile 的 all"
+        )

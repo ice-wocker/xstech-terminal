@@ -3,6 +3,58 @@
 版本号跟 `pyproject.toml` 和 `src/__init__.py` 同步。判断自己装的是不是修过的那版，
 跑 `xstech-gateway --version`。
 
+## v0.2.0
+
+### 开发方式：假上游搬到本地，CI 删掉
+
+上游是逆向出来的私有协议，随时会改；CI 在别人家的云上，随时会挂。两件事
+一叠加，就是「改一行代码要等两个外部服务赏脸」。这一版把它们一起收回来。
+
+**删掉 GitHub Actions。** 原来那条 workflow 干的事是安装、语法检查、单测、
+`cv2` 有/无两条腿 —— 没有一项需要云。现在全在根目录的 `Makefile` 里：
+
+```bash
+make all      # 语法检查 + 单测 + 端到端，全程 127.0.0.1，不出网
+```
+
+新增 `tests/test_packaging.py` 守卫这件事本身：Makefile 每条 recipe 过一遍
+`bash -n`、`make all` 必须带上 smoke/test/e2e、以及「再出现 workflow 文件
+就报错」—— 让删掉的东西不会悄悄长回来。
+
+**新增 `tools/fake_upstream.py`：一个跑在本机的假 xstech.one。**
+行为对齐真站点 —— 同样的路径、同样的 `{code,data,msg}` 包装、同样的裸
+`Authorization` 头（不带 `Bearer`）、同样的 SSE 帧格式。有两件事只有它能做：
+
+- 验证码是真的：背景现场画，块内像素从原图同一坐标抠出来，所以滑块求解
+  是真的在解题。这一点造错了，本地怎么测都是绿的，接上真站点就瞎。
+- 可以故意捣乱：按 5 个字符切片发送，`<think>` 必定被从中间切开。
+
+**新增 `tools/e2e_local.py`：假上游 + 真端点，跑一遍用户会走的完整链路。**
+注册（含真解一道滑块）→ token 落盘 0600 → `/v1/models` → 非流式 →
+流式 SSE → 思考块不漏出。14 项断言，不出网。
+
+**新增 `tests/test_fake_upstream.py`（8 例）：拿真 HTTP 打假上游。**
+补上打桩测不到的那层：`Authorization` 头、响应包装拆包、SSE 分片、
+「同一道题不能核验两次」。总计 39 例。
+
+### 修复：流式请求遇上上游出错时会断连接，而不是回错误
+
+`server.py` 的 `_stream()` 原来等 `end_headers()` 之后才推进生成器。
+而 `gateway.stream()` 是惰性生成器 —— 上游鉴权失败、模型不存在这类错误
+都在第一次 `next()` 时才抛。等那时头已经发出去了，只能断开连接，
+客户端看到的是「连接被重置」，看不出问题在上游。
+
+现在先 `next()` 一次：出错时还没发头，可以正常回 502。
+
+### 修复：上游连不上时，非流式路径会漏出裸异常
+
+`/v1/models` 和 `/v1/chat/completions` 只 `catch` 了 `UpstreamError`。
+上游连不上时 `requests` 抛的是 `ConnectionError`，直接冒到
+`BaseHTTPRequestHandler` 外面 —— 客户端拿到的还是断连。加了兜底转 502。
+
+这两个都是 e2e 一跑就撞出来的：以前只测过打桩的上游对象，而假对象不会
+「连不上」、也不会「抛非 UpstreamError 的异常」。
+
 ## v0.1.1
 
 ### 修复：没装 OpenCV 时连 CLI 都起不来
