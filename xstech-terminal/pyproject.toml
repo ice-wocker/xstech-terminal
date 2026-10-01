@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "xstech-gateway"
-version = "0.1.0"
+version = "0.2.0"
 description = "把 xstech.one 的网页端能力包装成 OpenAI 兼容端点，供终端与本地工具使用"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -26,8 +26,9 @@ dev = ["pytest>=7.4"]
 # 连 CLI 都起不来 —— 报的还是裸 ModuleNotFoundError。
 captcha-cv2 = ["opencv-python-headless>=4.8"]
 
+# tools/ 也装进去：`make e2e` 和 tests 都要 import 它
 [tool.setuptools]
-packages = ["src"]
+packages = ["src", "tools"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

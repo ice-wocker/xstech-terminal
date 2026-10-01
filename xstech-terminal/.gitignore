@@ -7,3 +7,6 @@ build/
 *.egg-info/
 credentials.json
 .pytest_cache/
+
+# 假上游的 pid 文件
+*.pid
