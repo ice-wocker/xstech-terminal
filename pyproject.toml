@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "xstech-gateway"
+version = "0.1.1"
+description = "把 xstech.one 的网页端能力包装成 OpenAI 兼容端点，供终端与本地工具使用"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+keywords = ["openai-compatible", "llm", "cli", "gateway", "terminal", "xstech"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Utilities",
+]
+
+dependencies = [
+    "requests>=2.31",
+    "pillow>=10.0",
+    "numpy>=1.24",
+]
+
+# 注意：[project.urls] 必须排在 dependencies 之后、且不能插在 [project] 的表项中间。
+# 上一版把它放在了 dependencies 前面，TOML 会把随后那几行解析成
+# `project.urls.dependencies`（嵌套表），pip 直接报：
+#   invalid pyproject.toml config: `project.urls.dependencies` must be string
+[project.urls]
+Homepage = "https://github.com/ice-wocker/xstech-terminal"
+Repository = "https://github.com/ice-wocker/xstech-terminal"
+Changelog = "https://github.com/ice-wocker/xstech-terminal/blob/main/CHANGELOG.md"
+
+[project.scripts]
+xstech-gateway = "src.cli:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    # 3.10 没有 tomllib（3.11 才进标准库），测试里要用它解析 pyproject.toml
+    "tomli>=2.0; python_version < \"3.11\"",
+    # 测试里用 yaml 解析 workflow 并逐个 bash -n 校验 run 块。
+    # 少了它那条守卫会**静默 skip** —— 看着绿，其实没查。
+    "pyyaml>=6.0",
+]
+# OpenCV 只用于加速滑块求解里的形态学腐蚀，**不是硬依赖**：
+# 不装它时 captcha.py 会退回等价的纯 numpy 实现（见 src/captcha.py 的 _erode）。
+# 旧版把 `import cv2` 写在模块顶层，导致没装 cv2 的机器（Termux 默认就没有）
+# 连 CLI 都起不来 —— 报的还是裸 ModuleNotFoundError。
+captcha-cv2 = ["opencv-python-headless>=4.8"]
+
+[tool.setuptools]
+packages = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

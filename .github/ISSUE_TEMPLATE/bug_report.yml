@@ -1,0 +1,79 @@
+name: Bug 报告
+description: 报告一个可复现的问题
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。**先说一句：请勿在 Issue 里粘贴任何凭据
+        （`credentials.json` 内容、token、密码）。** 需要的话用
+        [Security → Report a vulnerability](../../security/advisories/new)。
+
+  - type: textarea
+    id: what
+    attributes:
+      label: 发生了什么
+      description: 贴出完整报错，不要只写「跑不起来」
+      placeholder: |
+        $ xstech-gateway register
+        <完整 traceback>
+    validations:
+      required: true
+
+  - type: textarea
+    id: expect
+    attributes:
+      label: 你期望发生什么
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: 版本
+      description: 跑 `xstech-gateway --version` 得到
+      placeholder: xstech-gateway 0.1.1
+    validations:
+      required: true
+
+  - type: dropdown
+    id: env
+    attributes:
+      label: 运行环境
+      description: 这决定了很多问题的根因（比如 OpenCV 的可用性）
+      options:
+        - Linux
+        - macOS
+        - Termux (Android)
+        - Windows
+        - 其他 / 容器
+    validations:
+      required: true
+
+  - type: dropdown
+    id: cv2
+    attributes:
+      label: 装没装 OpenCV
+      description: 跑 `python -c "import cv2"` 看结果。它是可选加速，不是依赖 —— 但环境差异会影响滑块求解路径。
+      options:
+        - 没装（默认，正常）
+        - 装了 `.[captcha-cv2]`
+        - 不确定
+    validations:
+      required: true
+
+  - type: input
+    id: python
+    attributes:
+      label: Python 版本
+      placeholder: "3.11.2"
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: 其他线索（可选）
+      description: 是否改过 `--base`、用的哪个模型、是首次注册还是复用已有账号
+    validations:
+      required: false

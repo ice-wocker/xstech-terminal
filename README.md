@@ -11,18 +11,6 @@ xstech-gateway serve             # 起一个本地端点
 
 然后在任何支持 OpenAI 协议的地方填上 `http://127.0.0.1:8787/v1` 就行了。
 
-想先试试？**不用注册、不用联网**，本地假上游一行起：
-
-```bash
-make fake-up        # 起一个假的 xstech.one（127.0.0.1:9999）
-export XSTECH_BASE=http://127.0.0.1:9999
-xstech-gateway --email me@example.com --password Test123456 login
-xstech-gateway serve
-```
-
-假上游会说人话（回显你的输入），滑块验证码也是真会解的 —— 见下面的
-[本地开发](#本地开发) 一节。
-
 ---
 
 ## 它解决什么问题
@@ -48,7 +36,7 @@ xstech.one 是个网页聊天站，能力不错，但只能在浏览器里用：
 需要 Python 3.10+：
 
 ```bash
-git clone <this-repo>
+git clone https://github.com/ice-wocker/xstech-terminal.git
 cd xstech-terminal
 pip install -e .
 ```
@@ -85,6 +73,9 @@ xstech-gateway register
 ```bash
 xstech-gateway --email you@example.com --password 'your-password' login
 ```
+
+> Termux 上 `pip` 编译 numpy/pillow 比较慢，用系统包更快：
+> `pkg install python-numpy python-pillow`
 
 ### 2. 看看有哪些模型
 
@@ -219,6 +210,16 @@ aichat --api-url http://127.0.0.1:8787/v1 --model 'deepseek::deepseek-v4-flash'
 | 本站 `ask` / `serve` | ✅ |
 | 多轮对话 | ✅ 历史消息正确透传 |
 
+运行环境：
+
+| 环境 | 结果 |
+|---|---|
+| Linux / macOS | ✅ 含与不含 OpenCV 两种路径 |
+| **Termux (Android)** | ✅ 默认不带 OpenCV，走纯 numpy 路径（v0.1.1 前是必崩） |
+
+`cv2` 装了和没装**命中率相同**（两条路径的腐蚀结果逐像素一致），
+所以 Termux 上不必为了跑通去折腾 OpenCV 的交叉编译。
+
 思考块：上游把推理过程包在 `<think>...</think>` 里返回。本项目在交付前会剥掉它，
 并且处理了标签被 SSE 分片**从中间切开**的情况（`<thi` + `nk>`），
 不会把标签本身漏给客户端。
@@ -243,43 +244,14 @@ aichat --api-url http://127.0.0.1:8787/v1 --model 'deepseek::deepseek-v4-flash'
 
 ---
 
-## 本地开发
-
-**没有 CI，也不打算有。** 上游是别人的私有协议，跑测试不该先连上 GitHub、
-再连上 xstech.one —— 那等于把自己的构建押在两家别人的稳定性上。所有检查
-都在本机跑，一条命令：
+## 开发
 
 ```bash
-make install    # 装依赖（含开发依赖）
-make all        # 语法检查 + 单测 + 端到端，全程不出网
+pip install -e ".[dev]"
+pytest -q
 ```
 
-拆开看：
-
-| 命令 | 干什么 | 出网吗 |
-|---|---|---|
-| `make smoke` | 语法检查 + CLI 能起 | 否 |
-| `make test` | 33 条单测（含打桩与本地 HTTP） | 否 |
-| `make e2e` | 假上游 + 真端点，跑完整链路 | 否 |
-| `make fake-up` / `make fake-down` | 起/停一个常驻假上游 | 否 |
-
-### 本地假上游
-
-`tools/fake_upstream.py` 是一个跑在本机的假 xstech.one，行为对齐真站点：
-同样的路径、同样的 `{code,data,msg}` 包装、同样的裸 `Authorization` 头、
-同样的 SSE 帧格式。它做两件真站点做不了的事：
-
-- **验证码是真的**。背景图现场画，块内像素从原图同一坐标抠出来 ——
-  所以滑块求解是真的在解题，不是走过场。图造错了，本地绿、线上瞎。
-- **可以故意捣乱**。切片小到把 `<think>` 从中间切开，专门撞流式过滤的坑。
-
-```bash
-python tools/fake_upstream.py --port 0     # 随机端口，测试里这么用
-python tools/fake_upstream.py --detach     # 后台常驻，配合手工调试
-FAKE_UPSTREAM_VERBOSE=1 python tools/fake_upstream.py   # 打访问日志
-```
-
-### 目录
+测试全部离线（`tests/test_gateway.py` 用假上游），不依赖网络。
 
 ```
 src/
@@ -289,15 +261,17 @@ src/
   server.py    HTTP 服务（标准库，零额外依赖）
   account.py   凭据保管
   cli.py       命令行入口
-tests/
-  test_gateway.py      打桩上游，测协议翻译
-  test_captcha.py      滑块求解（含 cv2 / numpy 两条路径比对）
-  test_fake_upstream.py 真 HTTP 打本地假上游
-tools/
-  fake_upstream.py     本地假上游
-  e2e_local.py         端到端（假上游 + 真端点）
-Makefile               上面这些的入口
 ```
+
+---
+
+## 版本与更新
+
+当前 **v0.1.1**。跑 `xstech-gateway --version` 确认自己装的是哪版。
+
+改动记录见 [CHANGELOG.md](CHANGELOG.md)。最近一次修复值得单独提：
+v0.1.1 之前，没装 OpenCV 的环境（Termux 默认如此）**连 `xstech-gateway --help`
+都跑不起来** —— 根因是 `captcha.py` 在模块顶层写死了 `import cv2`。
 
 ---
 

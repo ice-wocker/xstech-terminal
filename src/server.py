@@ -70,11 +70,6 @@ def make_handler(gateway: ChatGateway, api_key: str):
                     self._send(200, {"object": "list", "data": gateway.list_models()})
                 except UpstreamError as exc:
                     self._error(str(exc), 502, "upstream_error")
-                except Exception as exc:  # noqa: BLE001
-                    # 上游连不上时 requests 抛的是 ConnectionError 这类裸异常。
-                    # 不放兜底会直接冒到 BaseHTTPRequestHandler 外面 —— 客户端
-                    # 拿到的是「连接被断开」，看不出是上游的问题。
-                    self._error(f"{type(exc).__name__}: {exc}", 502, "upstream_error")
             else:
                 self._error("Not Found", 404)
 
@@ -102,19 +97,6 @@ def make_handler(gateway: ChatGateway, api_key: str):
         def _stream(self, body: dict):
             # HTTP/1.1 下没有 Content-Length 就必须用 chunked，否则客户端
             # 会一直等一个永远不会到来的长度头，表现为「卡住不返回」。
-            #
-            # 生成器要手动推进：`gateway.stream()` 是惰性生成器，第一次 next()
-            # 之前什么都还没发生 —— 上游鉴权失败、模型不存在这类错误都在那时才抛。
-            # 如果等 end_headers() 之后再抛，头已经出去了，只能断开连接，
-            # 客户端看到的是「连接被重置」而不是一条可读的错误。
-            gen = gateway.stream(body)
-            try:
-                first = next(gen)
-            except UpstreamError as exc:
-                return self._error(str(exc), 502, "upstream_error")
-            except Exception as exc:  # noqa: BLE001 - 兜底，避免连接悬挂
-                return self._error(f"{type(exc).__name__}: {exc}", 500, "internal_error")
-
             self.send_response(200)
             self.send_header("Content-Type", "text/event-stream; charset=utf-8")
             self.send_header("Cache-Control", "no-cache")
@@ -123,18 +105,13 @@ def make_handler(gateway: ChatGateway, api_key: str):
             for k, v in CORS.items():
                 self.send_header(k, v)
             self.end_headers()
-
-            def push(payload: str):
-                data = payload.encode("utf-8")
-                self.wfile.write(f"{len(data):X}\r\n".encode())
-                self.wfile.write(data)
-                self.wfile.write(b"\r\n")
-                self.wfile.flush()
-
             try:
-                push(first)
-                for chunk in gen:
-                    push(chunk)
+                for chunk in gateway.stream(body):
+                    data = chunk.encode("utf-8")
+                    self.wfile.write(f"{len(data):X}\r\n".encode())
+                    self.wfile.write(data)
+                    self.wfile.write(b"\r\n")
+                    self.wfile.flush()
                 self.wfile.write(b"0\r\n\r\n")  # 结束块
                 self.wfile.flush()
             except (BrokenPipeError, ConnectionResetError):
