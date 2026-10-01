@@ -18,8 +18,8 @@ jobs:
       # 用变量拼 extra，避免出现 `pip install -e ""` 这种非法参数
       CV2_EXTRA: ${{ matrix.install-cv2 == 'yes' && '.[captcha-cv2]' || '' }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
       - name: 安装依赖（OpenCV=${{ matrix.install-cv2 }}）
@@ -54,8 +54,8 @@ jobs:
   test-no-cv2-explicit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: 只装最小依赖（不含 OpenCV）
