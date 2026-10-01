@@ -4,7 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "xstech-gateway"
-version = "0.2.0"
+# 版本只写在 src/__init__.py，这里动态引用 —— 避免两处各写一个数然后漂移。
+# 注意：`project.version` 必须是字面量，所以只能用 dynamic 机制，不能写 `version = {attr=...}`。
+dynamic = ["version"]
 description = "把 xstech.one 的网页端能力包装成 OpenAI 兼容端点，供终端与本地工具使用"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -39,6 +41,9 @@ Changelog = "https://github.com/ice-wocker/xstech-terminal/blob/main/CHANGELOG.m
 [project.scripts]
 xstech-gateway = "src.cli:main"
 
+[tool.setuptools.dynamic]
+version = {attr = "src.__version__"}
+
 [project.optional-dependencies]
 dev = [
     "pytest>=7.4",
@@ -53,10 +58,15 @@ dev = [
 # 旧版把 `import cv2` 写在模块顶层，导致没装 cv2 的机器（Termux 默认就没有）
 # 连 CLI 都起不来 —— 报的还是裸 ModuleNotFoundError。
 captcha-cv2 = ["opencv-python-headless>=4.8"]
+# 驱动真浏览器过阿里云人机验证用。**可选**：不装它时 amd-register 会
+# 退回「不带 ticket」的诚实默认（服务端会直接拒绝），不会 import 失败。
+browser = ["playwright>=1.40"]
 
-# tools/ 也打进包里：`make e2e` 和 tests 都要 import 它
 [tool.setuptools]
-packages = ["src", "tools"]
+packages = ["src"]
+
+# tools/ 下的脚本要从仓库根导入 src，因此不能作为独立包安装；
+# 它们只用于手动验收（tools/verify_endpoint.py）与 CI 守卫，见 CONTRIBUTING。
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

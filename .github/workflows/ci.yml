@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.12"]
+        # 两条腿：装了 OpenCV 的走加速路径，没装的走 numpy 兜底。
+        # 之前只测了前者，结果「Termux 上没装 cv2 直接 traceback」漏到了用户手里。
+        install-cv2: ["yes", "no"]
+    env:
+      # 用变量拼 extra，避免出现 `pip install -e ""` 这种非法参数
+      CV2_EXTRA: ${{ matrix.install-cv2 == 'yes' && '.[captcha-cv2]' || '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: 安装依赖（OpenCV=${{ matrix.install-cv2 }}）
+        run: |
+          python -m pip install --upgrade pip
+          if [ -n "$CV2_EXTRA" ]; then
+            pip install -e "$CV2_EXTRA"
+          fi
+          pip install -e ".[dev]"
+      - name: 断言 OpenCV 的存在状态符合预期
+        run: |
+          if [ "${{ matrix.install-cv2 }}" = "yes" ]; then
+            python -c "import cv2; print('cv2', cv2.__version__)"
+          else
+            # 这段逻辑抽到 tools/assert_no_cv2.py，不再内联 heredoc：
+            # heredoc 结束符一旦被 YAML 块缩进带歪，bash 就找不到它，
+            # 报 `syntax error: unexpected end of file`（v0.1.1 前栽过）。
+            # 抽成文件后：语法能被 compileall 查到，逻辑能被单测覆盖。
+            python tools/assert_no_cv2.py
+          fi
+      - name: 语法检查
+        run: python -m compileall -q src tests
+      - name: 单测
+        run: python -m pytest -q
+      - name: 冒烟：CLI 可执行且能加载模块
+        run: |
+          xstech-gateway --version
+          xstech-gateway --help
+
+  # 单独一条腿：把 cv2 从导入系统里彻底藏掉，再跑一遍注册链路的导入与求解，
+  # 确保「没装 OpenCV」这条路径真的可用（这是真出过的故障）。
+  test-no-cv2-explicit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 只装最小依赖（不含 OpenCV）
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      - name: 屏蔽 cv2 后导入整条注册链路并解一道题
+        run: python tools/check_no_cv2_path.py

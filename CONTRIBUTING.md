@@ -4,25 +4,15 @@
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
-make install
-make all          # 语法检查 + 单测 + 端到端，全程不出网
+pip install -e ".[dev]"
+pytest -q
 ```
-
-**这个项目没有 CI，也不加 CI。** 所有检查都在 `Makefile` 里，本地一条
-`make all` 跑完，不依赖任何外部服务。理由和下面第一条约定是同一个。
 
 ## 几条约定
 
 - **测试必须离线。** 单元测试不能打网络 —— 上游会变、会限流，
-  让构建依赖真实站点等于把命运押在别人手里。要验证网络行为就用
-  `tools/fake_upstream.py`：它是真起一个 HTTP 服务，但只在本机。
-  需要真上游的验证手工跑，别塞进 `pytest`。
-- **不加 CI，检查进 `Makefile`。** 构建不该先连上第三方 CI 才能跑。
-  新增一条检查就往 `Makefile` 的 `all` 里加一步，并且加进
-  `tests/test_packaging.py` 的覆盖断言 —— 本地跑得起来才算数。
-- **改了假上游，先确认它和真站点没跑偏。** 假上游最大的风险不是坏掉，
-  是**太宽容**：真站点会拒绝的请求它照收，于是本地全绿、线上全红。
-  改协议形状时以 `src/upstream.py` 的路径常量和真实抓包为准。
+  让 CI 依赖真实站点等于把构建押在别人的稳定性上。需要真实上游的验证
+  放脚本里手动跑，不要塞进 `pytest`。
 - **协议差异写在 `upstream.py`，别漏到 `gateway.py`。** 前者只管把私有协议
   翻译成内部结构，后者只管输出 OpenAI 格式。混在一起以后上游一改就到处改。
 - **滑块求解别改通道顺序。** `captcha.py` 里原图和裁剪块都解码成 BGR：
@@ -36,6 +26,41 @@ make all          # 语法检查 + 单测 + 端到端，全程不出网
 - **流式过滤必须无状态。** `visible_prefix()` 每帧对完整缓冲重算，
   不要退回「用外部标志记住状态」的写法 —— 标签会被 SSE 从中间切开，
   有状态版本一旦某帧判断错就会一路错到底。
+
+## 两套 CI 的分工
+
+这个仓库同时有 GitHub Actions（`.github/workflows/ci.yml`）和 CNB 流水线（`.cnb.yml`），
+**不是重复劳动**：
+
+| 平台 | 跑什么 | 为什么 |
+|---|---|---|
+| GitHub Actions | 3.10 × 3.12，装/不装 OpenCV 两条腿 | 有 cv2 的加速路径要真的被跑到 |
+| CNB | 默认环境就是无 OpenCV | 天然等于 Termux，顺手验证无 cv2 路径 |
+| CNB | 合并后把改动推回 GitHub | CNB 是镜像侧，GitHub 是权威侧 |
+
+要配的环境变量（**只存在 CNB 仓库设置里，不进仓库**）：
+
+- `GITHUB_SYNC_TOKEN`：对 `ice-wocker/xstech-terminal` 有 `contents:write` 权限的
+  fine-grained PAT。CNB 的 import 变量默认「仅 import 时可用」，这条流水线要用到，
+  必须改成允许在流水线中读取，否则推送步骤会因变量为空而失败。
+- `GITHUB_SYNC_REPO`（可选）：默认 `ice-wocker/xstech-terminal`。
+
+方向是单向的 **CNB → GitHub**。CNB 侧是镜像，谁也别反向拉，否则两边互相覆盖。
+
+## 手动验收「模型都能用」
+
+CI 里**不允许**出现需要真实网络的步骤（有 `test_ci_has_no_network_steps` 盯着）。
+验证端点可用性是手动活：
+
+```bash
+xstech-gateway register            # 或 login
+python tools/verify_endpoint.py    # 逐模型实调，输出表格 + 汇总
+python tools/verify_endpoint.py --json report.json
+```
+
+它会把失败分成两类：**账号额度类**（普通账号没有某些模型的额度，必然如此）
+和**上游可用性类**（无渠道、上游自带组件版本过旧）。这两类都不是代码回归，
+但需要人看一眼；只有第三类（端点真的跑不通）才说明代码坏了。
 
 ## 提交 PR
 
