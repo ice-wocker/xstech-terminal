@@ -123,7 +123,7 @@ def test_version_is_consistent():
 
     init_text = (ROOT / "xstech" / "__init__.py").read_text(encoding="utf-8")
     m = re.search(r'__version__\s*=\s*"([^"]+)"', init_text)
-    assert m, "src/__init__.py 里找不到 __version__"
+    assert m, "xstech/__init__.py 里找不到 __version__"
 
     if "version" in project:
         pkg_version = project["version"]

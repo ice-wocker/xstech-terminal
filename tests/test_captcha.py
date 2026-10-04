@@ -41,7 +41,7 @@ def _sample_captcha(seed: int = 42, thumb_y: int = 50, answer_x: int = 173):
 
 
 def _import_captcha_without_cv2(monkeypatch):
-    """在「cv2 不存在」的环境里重新导入 src.captcha。"""
+    """在「cv2 不存在」的环境里重新导入 xstech.captcha。"""
     real_import = builtins.__import__
 
     def fake_import(name, *args, **kwargs):
@@ -50,9 +50,9 @@ def _import_captcha_without_cv2(monkeypatch):
         return real_import(name, *args, **kwargs)
 
     monkeypatch.setattr(builtins, "__import__", fake_import)
-    for mod in [m for m in sys.modules if m == "src.captcha" or m.startswith("src.captcha.")]:
+    for mod in [m for m in sys.modules if m == "xstech.captcha" or m.startswith("xstech.captcha.")]:
         del sys.modules[mod]
-    return importlib.import_module("src.captcha")
+    return importlib.import_module("xstech.captcha")
 
 
 # ---------- 回归：没装 cv2 时不能再炸在 import ----------
@@ -67,9 +67,9 @@ def test_import_without_cv2_does_not_raise(monkeypatch):
 def test_upstream_module_imports_without_cv2(monkeypatch):
     """端到端的关键：没 cv2 时 `register` 走的整条导入链都要能起来。"""
     _import_captcha_without_cv2(monkeypatch)
-    for mod in [m for m in sys.modules if m == "src.upstream" or m.startswith("src.upstream.")]:
+    for mod in [m for m in sys.modules if m == "xstech.upstream" or m.startswith("xstech.upstream.")]:
         del sys.modules[mod]
-    upstream = importlib.import_module("src.upstream")
+    upstream = importlib.import_module("xstech.upstream")
     assert hasattr(upstream.Upstream, "solve_challenge")
 
 
