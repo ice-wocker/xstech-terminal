@@ -8,8 +8,8 @@
 
 import pytest
 
-from src import spoof
-from src.spoof import (
+from xstech import spoof
+from xstech.spoof import (
     FORGED_PARAMS,
     SPOOF_HEADERS,
     SpoofFinding,

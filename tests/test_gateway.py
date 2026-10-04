@@ -4,8 +4,8 @@ import json
 
 import pytest
 
-from src.gateway import ChatGateway, strip_think, visible_prefix
-from src.upstream import Upstream, UpstreamError
+from xstech.gateway import ChatGateway, strip_think, visible_prefix
+from xstech.upstream import Upstream, UpstreamError
 
 
 class FakeUpstream(Upstream):
@@ -173,7 +173,7 @@ def test_strip_think_keeps_text_before_open_tag():
 
 def test_cli_ask_reuses_visible_prefix(monkeypatch, capsys):
     """ask 必须复用 gateway 的可见前缀逻辑，否则会漏出 <think>。"""
-    from src import cli
+    from xstech import cli
 
     class FakeUp(Upstream):
         def __init__(self, *a, **k):

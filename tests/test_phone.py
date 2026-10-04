@@ -9,7 +9,7 @@ import random
 
 import pytest
 
-from src import phone
+from xstech import phone
 
 
 @pytest.fixture(autouse=True)

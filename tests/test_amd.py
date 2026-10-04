@@ -14,7 +14,7 @@
 
 import pytest
 
-from src.amd import (
+from xstech.amd import (
     AmdClient,
     AmdError,
     AmdHttpError,
@@ -149,7 +149,7 @@ def test_register_sends_every_field_the_frontend_sends():
     这条断言把前端 payload 的字段集合钉死 —— 以后谁删了一个字段，
     测试立刻变红，而不是等到线上某个分支行为变了才发现。
     """
-    from src.amd import REGISTER_FIELDS
+    from xstech.amd import REGISTER_FIELDS
 
     fake = FakeAmd([ok()])
     fake.register(email="a@b.com", code="123456", phone_number="13800138000")
@@ -275,7 +275,7 @@ def test_code_regex_needs_non_digit_boundaries():
     注册邮件里常见形如「订单号 2026010112345678」的内容，用错正则就会
     抓出 6 位假码。这里直接验边界。
     """
-    from src.amd import _AMD_CODE_RE
+    from xstech.amd import _AMD_CODE_RE
 
     assert _AMD_CODE_RE.search("验证码 123456").group(1) == "123456"
     assert _AMD_CODE_RE.search("手机 13800138000") is None
@@ -306,7 +306,7 @@ def test_browser_solver_hooks_sdk_success_callback():
     内部字段名每个版本都会变（SDK 是逐版本重新混淆的），依赖它等于
     给自己埋一个「上游一升级就静默失效」的坑。回调是公开契约。
     """
-    from src.amd import BrowserCaptchaSolver
+    from xstech.amd import BrowserCaptchaSolver
 
     page = FakePage(["hooked", "PARAM-FROM-BROWSER"])
     solver = BrowserCaptchaSolver(page)
@@ -320,7 +320,7 @@ def test_browser_solver_hooks_sdk_success_callback():
 
 def test_browser_solver_returns_empty_when_sdk_absent():
     """SDK 没加载时返回空串，让上层按「没拿到 ticket」处理，而不是崩。"""
-    from src.amd import BrowserCaptchaSolver
+    from xstech.amd import BrowserCaptchaSolver
 
     page = FakePage(["no-sdk", ""])
     assert BrowserCaptchaSolver(page).solve("p", "t") == ""
@@ -328,7 +328,7 @@ def test_browser_solver_returns_empty_when_sdk_absent():
 
 def test_browser_solver_is_registered_as_captcha_solver():
     """它必须满足 CaptchaSolver 协议的形状（有 solve(purpose, target)）。"""
-    from src.amd import BrowserCaptchaSolver
+    from xstech.amd import BrowserCaptchaSolver
 
     solver = BrowserCaptchaSolver(FakePage())
     assert callable(getattr(solver, "solve", None))

@@ -103,7 +103,7 @@ def _erode_both_ways(captcha_module, mask: np.ndarray, cv2_module):
 @pytest.mark.parametrize("shape", [(40, 44), (5, 5), (4, 4), (6, 9), (3, 20), (9, 3), (60, 60)])
 def test_erode_fallback_matches_cv2(shape):
     cv2 = pytest.importorskip("cv2")
-    from src import captcha
+    from xstech import captcha
 
     rng = np.random.default_rng(7)
     mismatches = 0
@@ -117,7 +117,7 @@ def test_erode_fallback_matches_cv2(shape):
 
 def test_erode_all_true_mask_is_fully_kept():
     """全 1 的掩码经 5x5 腐蚀后不应被削（OpenCV 在边界裁结构元，不做零填充）。"""
-    from src import captcha
+    from xstech import captcha
 
     mask = np.ones((9, 9), np.float32)
     a, b = _erode_both_ways(captcha, mask, captcha._cv2)
@@ -126,7 +126,7 @@ def test_erode_all_true_mask_is_fully_kept():
 
 
 def test_erode_removes_isolated_pixels():
-    from src import captcha
+    from xstech import captcha
 
     mask = np.zeros((15, 15), np.float32)
     mask[7, 7] = 1
@@ -154,8 +154,8 @@ def test_missing_pillow_raises_actionable_error(monkeypatch):
 
 def test_upstream_wraps_missing_dependency_as_upstream_error(monkeypatch):
     """solve_challenge 要把「缺依赖」翻译成可读提示，而不是让它冒成裸异常。"""
-    from src import captcha as real_captcha
-    from src import upstream
+    from xstech import captcha as real_captcha
+    from xstech import upstream
 
     def fake_challenge(self):
         return {"id": "x", "thumbY": 0, "image": "", "thumb": ""}

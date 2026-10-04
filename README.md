@@ -175,7 +175,7 @@ AMD 两个命令另有 `--proxy`（出口 IP 伪装）与 `--no-stealth`（关�
 
 ### ✅ 能全自动的
 
-- **收信**：inboxes.com 整条链路是开放 REST（见 `src/mailbox.py`），
+- **收信**：inboxes.com 整条链路是开放 REST（见 xstech/mailbox.py`），
   认领地址、轮询、取正文全部纯 HTTP。
 - **协议层**：发码 `POST /api/api/User/SendVerificationCode`、注册
   `POST /api/api/User/Register`、登录 `POST /api/api/User/LoginByCode`、
@@ -230,10 +230,10 @@ VerificationMethod="email" + PhoneNumber=""
 | 判定权 | 客户端能算 | **服务端** |
 
 xstech.one 把「形状裁剪块」单独发了一份，所以能用相关匹配**算出**偏移 ——
-那是真的解出来了，能纯 HTTP 跑（`src/captcha.py`）。
+那是真的解出来了，能纯 HTTP 跑（xstech/captcha.py`）。
 
 阿里云这套只把你**拖动的轨迹**报上去，正确位置从不返回客户端。
-但**缺口的位置是可以从两张图里定位的**（`src/slider.py`）：
+但**缺口的位置是可以从两张图里定位的**（xstech/slider.py`）：
 `back.png` 里缺口是一层半透明白，`shadow.png` 是碎片形状，
 用碎片轮廓在半透明图上做归一化互相关就能稳定命中（实测 8 张真图，
 误差 ≤1px）。拼图块的位移还带一条二次缓动
@@ -425,7 +425,7 @@ CaptchaVerifyParam = { sceneId, certifyId, deviceToken, data:{轨迹...} }
 xstech-gateway amd-register            # 自动生成随机中国大陆号码
 ```
 
-`src/phone.py` 用真实号段（三大运营商公开前缀），并保证**同一批内不重复**
+xstech/phone.py` 用真实号段（三大运营商公开前缀），并保证**同一批内不重复**
 （对应「同一个手机号不能注册两次」）。想指定就加 `--phone`。
 
 ### 收件箱：默认 clowmail.com，被拦自动换
@@ -495,7 +495,7 @@ xstech-gateway amd-ticket          # 看票还有多久过期（--clear 删掉�
 于是问题从「识别形状」变成「模板匹配」：把裁剪块当模板，在原图**相同的 Y 坐标**上
 按横向扫描，归一化相关最强的位置就是答案。
 
-两个调参要点（都写在 `src/captcha.py` 的注释里）：
+两个调参要点（都写在 xstech/captcha.py` 的注释里）：
 
 - 原图和裁剪块**必须用同一套通道顺序**。混用 RGB/BGR 会让相关性从 0.9 掉到 0.3
 - 裁剪块外圈有描边和抗锯齿，先用 5×5 腐蚀削掉，否则信号被稀释
@@ -572,7 +572,7 @@ pytest -q
 测试全部离线（`tests/test_gateway.py` 用假上游），不依赖网络。
 
 ```
-src/
+xstech/
   captcha.py   滑块求解（相关性模板匹配，OpenCV 可选）
   upstream.py  私有协议客户端
   gateway.py   翻译成 OpenAI 协议

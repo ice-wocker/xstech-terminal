@@ -41,7 +41,7 @@ jobs:
             python tools/assert_no_cv2.py
           fi
       - name: 语法检查
-        run: python -m compileall -q src tests
+        run: python -m compileall -q xstech tests
       - name: 单测
         run: python -m pytest -q
       - name: 冒烟：CLI 可执行且能加载模块

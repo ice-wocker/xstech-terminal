@@ -9,7 +9,7 @@ import re
 
 import pytest
 
-from src.mailbox import Mailbox, MailboxError, Message
+from xstech.mailbox import Mailbox, MailboxError, Message
 
 
 class FakeMailbox(Mailbox):

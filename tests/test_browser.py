@@ -11,8 +11,8 @@
 
 import pytest
 
-from src import browser
-from src.amd import CaptchaRequired, NoCaptchaSolver
+from xstech import browser
+from xstech.amd import CaptchaRequired, NoCaptchaSolver
 
 
 def test_error_maps_to_captcha_required():

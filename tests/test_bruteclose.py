@@ -12,8 +12,8 @@
 
 import pytest
 
-from src import bruteclose
-from src.bruteclose import (
+from xstech import bruteclose
+from xstech.bruteclose import (
     ClosureItem,
     ClosureReport,
     assess_replay,
@@ -191,7 +191,7 @@ def test_param_layer_codes_are_not_treated_as_draw(code):
 
     混为一谈会让人以为「画像也拦了」，从而错判该往哪个方向查。
     """
-    from src.spoof import classify_verify_code
+    from xstech.spoof import classify_verify_code
 
     msg = classify_verify_code(code)
     assert "参数层" in msg
@@ -214,9 +214,9 @@ def test_version_has_single_source_of_truth():
     """
     from pathlib import Path
 
-    import src
+    import xstech
 
-    pyproject = Path(src.__file__).resolve().parent.parent / "pyproject.toml"
+    pyproject = Path(xstech.__file__).resolve().parent.parent / "pyproject.toml"
     text = pyproject.read_text(encoding="utf-8")
 
     # 1) 不允许在 [project] 里硬写一个版本号（那会和 __init__ 漂移）
@@ -228,5 +228,5 @@ def test_version_has_single_source_of_truth():
 
     # 2) 必须声明动态版本，且指向 __init__ 里的字段
     assert 'dynamic = ["version"]' in text
-    assert 'version = {attr = "src.__version__"}' in text
-    assert src.__version__
+    assert 'version = {attr = "xstech.__version__"}' in text
+    assert xstech.__version__

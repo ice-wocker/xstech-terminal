@@ -34,7 +34,7 @@ def _fake_import(name, *args, **kwargs):
 
 builtins.__import__ = _fake_import
 
-from src import captcha, upstream  # noqa: E402  （必须在 hook 之后导入）
+from xstech import captcha, upstream  # noqa: E402  （必须在 hook 之后导入）
 
 assert captcha.HAS_CV2 is False, "应该探测到没有 cv2"
 assert hasattr(upstream.Upstream, "solve_challenge")

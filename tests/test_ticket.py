@@ -16,7 +16,7 @@ import time
 
 import pytest
 
-from src import ticket as T
+from xstech import ticket as T
 
 
 def test_save_and_load_roundtrip(tmp_path):

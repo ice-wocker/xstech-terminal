@@ -12,7 +12,7 @@ import numpy as np
 import pytest
 from PIL import Image, ImageDraw
 
-from src import slider
+from xstech import slider
 
 
 def _data_url(arr: np.ndarray) -> str:

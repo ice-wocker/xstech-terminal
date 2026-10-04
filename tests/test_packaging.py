@@ -121,7 +121,7 @@ def test_version_is_consistent():
         project = tomllib.load(f)["project"]
     assert project["name"] == "xstech-gateway", "包名不对，本文件的其余断言会跟着错"
 
-    init_text = (ROOT / "src" / "__init__.py").read_text(encoding="utf-8")
+    init_text = (ROOT / "xstech" / "__init__.py").read_text(encoding="utf-8")
     m = re.search(r'__version__\s*=\s*"([^"]+)"', init_text)
     assert m, "src/__init__.py 里找不到 __version__"
 
@@ -135,7 +135,7 @@ def test_version_is_consistent():
         pkg_version = m.group(1)
 
 
-    cli_text = (ROOT / "src" / "cli.py").read_text(encoding="utf-8")
+    cli_text = (ROOT / "xstech" / "cli.py").read_text(encoding="utf-8")
     assert m.group(1) == pkg_version, (
         f"版本号不一致：pyproject={pkg_version}，__init__={m.group(1)}；"
         "两者必须同步，否则用户没法从 --version 判断自己装的是哪版"

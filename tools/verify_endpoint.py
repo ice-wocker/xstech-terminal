@@ -24,9 +24,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.account import load  # noqa: E402
-from src.gateway import ChatGateway  # noqa: E402
-from src.upstream import Upstream  # noqa: E402
+from xstech.account import load  # noqa: E402
+from xstech.gateway import ChatGateway  # noqa: E402
+from xstech.upstream import Upstream  # noqa: E402
 
 PROMPT = "只回答两个字：可用"
 

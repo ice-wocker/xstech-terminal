@@ -8,7 +8,7 @@ import re
 
 import pytest
 
-from src.mailbox import Mailbox, MailboxError, MailboxPool
+from xstech.mailbox import Mailbox, MailboxError, MailboxPool
 
 CODE_RE = re.compile(r"(?<!\d)(\d{6})(?!\d)")
 

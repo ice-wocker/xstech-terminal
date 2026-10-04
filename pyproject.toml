@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "xstech-gateway"
-# 版本只写在 src/__init__.py，这里动态引用 —— 避免两处各写一个数然后漂移。
+# 版本只写在 xstech/__init__.py，这里动态引用 —— 避免两处各写一个数然后漂移。
 # 注意：`project.version` 必须是字面量，所以只能用 dynamic 机制，不能写 `version = {attr=...}`。
 dynamic = ["version"]
 description = "把 xstech.one 的网页端能力包装成 OpenAI 兼容端点，供终端与本地工具使用"
@@ -39,10 +39,10 @@ Repository = "https://github.com/ice-wocker/xstech-terminal"
 Changelog = "https://github.com/ice-wocker/xstech-terminal/blob/main/CHANGELOG.md"
 
 [project.scripts]
-xstech-gateway = "src.cli:main"
+xstech-gateway = "xstech.cli:main"
 
 [tool.setuptools.dynamic]
-version = {attr = "src.__version__"}
+version = {attr = "xstech.__version__"}
 
 [project.optional-dependencies]
 dev = [
@@ -54,7 +54,7 @@ dev = [
     "pyyaml>=6.0",
 ]
 # OpenCV 只用于加速滑块求解里的形态学腐蚀，**不是硬依赖**：
-# 不装它时 captcha.py 会退回等价的纯 numpy 实现（见 src/captcha.py 的 _erode）。
+# 不装它时 captcha.py 会退回等价的纯 numpy 实现（见 xstech/captcha.py 的 _erode）。
 # 旧版把 `import cv2` 写在模块顶层，导致没装 cv2 的机器（Termux 默认就没有）
 # 连 CLI 都起不来 —— 报的还是裸 ModuleNotFoundError。
 captcha-cv2 = ["opencv-python-headless>=4.8"]
@@ -63,9 +63,9 @@ captcha-cv2 = ["opencv-python-headless>=4.8"]
 browser = ["playwright>=1.40"]
 
 [tool.setuptools]
-packages = ["src"]
+packages = ["xstech"]
 
-# tools/ 下的脚本要从仓库根导入 src，因此不能作为独立包安装；
+# tools/ 下的脚本要从仓库根导入 xstech，因此不能作为独立包安装；
 # 它们只用于手动验收（tools/verify_endpoint.py）与 CI 守卫，见 CONTRIBUTING。
 
 [tool.pytest.ini_options]
