@@ -1,4 +1,10 @@
-# xstech-gateway
+# xstech-terminal
+
+> OpenAI-compatible gateway for xstech.one（把网页端能力包装成 OpenAI 兼容端点，改个 base_url 就能用）
+
+[![CI](https://github.com/ice-wocker/xstech-terminal/actions/workflows/ci.yml/badge.svg)](https://github.com/ice-wocker/xstech-terminal/actions)
+[![Release](https://img.shields.io/github/v/release/ice-wocker/xstech-terminal)](https://github.com/ice-wocker/xstech-terminal/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 把 [xstech.one](https://xstech.one) 的网页端能力包装成一个 **OpenAI 兼容端点**，
 让你能在终端、IDE 和各种本地工具里直接用它。
@@ -629,6 +635,9 @@ CNB 是镜像侧，GitHub 是权威侧。往 CNB 的 `main` 推送（含合并 P
 的 fine-grained PAT），细节见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ---
+
+## Star History
+[![Star History Chart](https://api.star-history.com/svg?repos=ice-wocker/xstech-terminal&type=Date)](https://star-history.com/#ice-wocker/xstech-terminal&Date)
 
 ## License
 
